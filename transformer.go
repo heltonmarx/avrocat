@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 )
 
 // Node holds the avro node json object
 type Node struct {
-	Namespace string                   `json:"namespace,omitempty"`
-	Name      string                   `json:"name"`
-	Type      string                   `json:"type"`
-	Fields    []map[string]interface{} `json:"fields"`
+	Namespace string           `json:"namespace,omitempty"`
+	Name      string           `json:"name"`
+	Type      string           `json:"type"`
+	Fields    []map[string]any `json:"fields"`
 }
 
 // Transform transforms an array of avro json schemas into only one avro json schema.
@@ -45,7 +46,7 @@ func Transform(buf []byte) ([]byte, error) {
 			return json.Marshal(node)
 		}
 	}
-	return nil, errors.New("Could not transform schema")
+	return nil, errors.New("could not transform schema")
 }
 
 // generateSchemaMapping generates an node map by reference.
@@ -64,14 +65,14 @@ func generateSchemaMapping(nodes []Node) (map[string]Node, error) {
 func updateSchemaReferences(node Node, schemasMapping map[string]Node) {
 	for _, element := range node.Fields {
 		item := element["type"]
-		switch item.(type) {
-		case []interface{}:
-			m := item.([]interface{})
+		switch item := item.(type) {
+		case []any:
+			m := item
 			for i, obj := range m {
 				v := reflect.ValueOf(obj)
 				if node, ok := buildNodeByMapping(v, schemasMapping); ok {
 					// remove object from node
-					m = append(m[:i], m[i+1:]...)
+					m = slices.Delete(m, i, i+1)
 					// append the new node
 					m = append(m, Node{
 						Name:   node.Name,
@@ -133,7 +134,7 @@ func buildNodeByMapping(v reflect.Value, schemasMapping map[string]Node) (Node, 
 			}
 		}
 	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
+		for i := range v.Len() {
 			elem := v.Index(i)
 			if !elem.IsNil() {
 				return buildNodeByMapping(elem, schemasMapping)

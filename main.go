@@ -59,7 +59,7 @@ func main() {
 	// Set the before function.
 	p.Before = func(ctx context.Context) error {
 		// On ^C, or SIGTERM handle exit.
-		signals := make(chan os.Signal)
+		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt)
 		signal.Notify(signals, syscall.SIGTERM)
 		_, cancel := context.WithCancel(ctx)
@@ -85,18 +85,18 @@ func main() {
 	p.Action = func(ctx context.Context, args []string) error {
 		switch {
 		case broker == "":
-			return errors.New("Kafka broker not defined")
+			return errors.New("kafka broker not defined")
 		case schema == "":
-			return errors.New("Schema filename not defined")
+			return errors.New("schema filename not defined")
 		case topic == "":
 			v := strings.Split(schema, "/")
 			if len(v) == 0 {
-				return errors.New("Invalid schema path")
+				return errors.New("invalid schema path")
 			}
 			n := len(v) - 1
 			topic = strings.TrimSuffix(v[n], ".avsc")
 			if topic == "" {
-				return errors.New("Topic not defined")
+				return errors.New("topic not defined")
 			}
 		}
 

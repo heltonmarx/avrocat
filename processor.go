@@ -66,7 +66,7 @@ func (p *Processor) decode(buf []byte) ([]byte, error) {
 }
 
 func (p *Processor) format(src []byte) ([]byte, error) {
-	var obj map[string]interface{}
+	var obj map[string]any
 	if err := json.Unmarshal(src, &obj); err != nil {
 		return nil, err
 	}
