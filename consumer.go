@@ -12,18 +12,27 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type Offset string
+
+const (
+	Oldest Offset = "oldest"
+	Newest Offset = "newest"
+)
+
 // Consume it is a blocking function who dispatch an incoming event to processor.
-func Consume(ctx context.Context, brokers []string, topic string, partitions string, offset string, processor *Processor) error {
+func Consume(ctx context.Context, brokers []string, topic string, partitions string, offset Offset, debug bool, processor *Processor) error {
 	var hwm int64
 	switch offset {
-	case "oldest":
+	case Oldest:
 		hwm = sarama.OffsetOldest
-	case "newest":
+	case Newest:
 		hwm = sarama.OffsetNewest
 	default:
 		return fmt.Errorf("invalid offset (%s) sould be `oldest` or `newest`", offset)
 	}
-
+	if debug {
+		sarama.Logger = logrus.StandardLogger()
+	}
 	consumer, err := sarama.NewConsumer(brokers, nil)
 	if err != nil {
 		return err
@@ -33,8 +42,11 @@ func Consume(ctx context.Context, brokers []string, topic string, partitions str
 	if err != nil {
 		return err
 	}
-	logrus.Debugf("connecting to %v -- partitions: %d\n", brokers, len(partitionList))
-	logrus.Debugf("topic: %s -- offset: %s\n", topic, offset)
+	logrus.WithFields(logrus.Fields{
+		"brokers":    brokers,
+		"topic":      topic,
+		"partitions": partitionList,
+		"offset":     offset}).Debugf("starting consumer")
 
 	var wg sync.WaitGroup
 	for _, partition := range partitionList {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -19,7 +18,7 @@ type Node struct {
 
 // Transform transforms an array of avro json schemas into only one avro json schema.
 func Transform(buf []byte) ([]byte, error) {
-	if ok := isArray(buf); !ok {
+	if !isJSONArray(buf) {
 		return buf, nil
 	}
 	nodes := make([]Node, 0)
@@ -51,7 +50,7 @@ func Transform(buf []byte) ([]byte, error) {
 
 // generateSchemaMapping generates an node map by reference.
 func generateSchemaMapping(nodes []Node) (map[string]Node, error) {
-	schemasMapping := make(map[string]Node)
+	schemasMapping := make(map[string]Node, len(nodes))
 	for _, node := range nodes {
 		if node.Namespace != "" && node.Name != "" {
 			refName := strings.Join([]string{node.Namespace, node.Name}, ".")
@@ -90,7 +89,7 @@ func updateSchemaReferences(node Node, schemasMapping map[string]Node) {
 	}
 }
 
-func updateElement(v reflect.Value, element map[string]interface{}, node Node) {
+func updateElement(v reflect.Value, element map[string]any, node Node) {
 	switch v.Kind() {
 	case reflect.String:
 		delete(element, "type")
@@ -152,7 +151,8 @@ func trimSuffix(namespace string) string {
 	return namespace[n+1:]
 }
 
-func isArray(buf []byte) bool {
-	v := bytes.TrimLeft(buf, " \t\r\n")
-	return len(v) > 0 && v[0] == '['
+func isJSONArray(buf []byte) bool {
+	var arr []any
+	err := json.Unmarshal(buf, &arr)
+	return err == nil
 }

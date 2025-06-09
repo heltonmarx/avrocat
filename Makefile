@@ -1,10 +1,10 @@
-GO									?= go
-NAME								:= $(lastword $(subst /, ,$(CURDIR)))
-BUILDFLAGS					:= -v -tags 'netgo'
-VERSION 						:= $(shell cat VERSION.txt)
-GITCOMMIT 					:= $(shell git rev-parse --short HEAD)
-GITUNTRACKEDCHANGES	:= $(shell git status --porcelain --untracked-files=no)
-PKG 								:= $(NAME)
+GO						?= go
+NAME					:= $(lastword $(subst /, ,$(CURDIR)))
+BUILDFLAGS				:= -v -tags 'netgo'
+VERSION 				:= $(shell cat VERSION.txt)
+GITCOMMIT 				:= $(shell git rev-parse --short HEAD)
+GITUNTRACKEDCHANGES		:= $(shell git status --porcelain --untracked-files=no)
+PKG 					:= $(NAME)
 
 ifneq ($(GITUNTRACKEDCHANGES),)
 	GITCOMMIT := $(GITCOMMIT)-dirty
@@ -16,7 +16,7 @@ endif
 CTIMEVAR		?= -X $(PKG)/version.GITCOMMIT=$(GITCOMMIT) -X $(PKG)/version.VERSION=$(VERSION)
 LDFLAGS			:= -ldflags "-w $(CTIMEVAR) -extldflags -static"
 
-all: build
+all: test build
 
 .PHONY: build
 build:
@@ -27,3 +27,7 @@ build:
 clean:
 	@$(GO) clean
 
+.PHONY: test
+test:
+	@echo "test ${NAME}"
+	@$(GO) test -v -cover ./...

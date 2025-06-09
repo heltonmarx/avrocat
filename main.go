@@ -11,7 +11,6 @@ import (
 
 	"avrocat/version"
 
-	"github.com/IBM/sarama"
 	"github.com/genuinetools/pkg/cli"
 	"github.com/sirupsen/logrus"
 )
@@ -74,7 +73,6 @@ func main() {
 		// Set the log level.
 		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
-			sarama.Logger = logrus.New()
 		} else {
 			logrus.SetLevel(logrus.ErrorLevel)
 		}
@@ -120,7 +118,7 @@ func main() {
 			return err
 		}
 		brokers := parseBrokers(broker)
-		err = Consume(ctx, brokers, topic, partitions, offset, processor)
+		err = Consume(ctx, brokers, topic, partitions, Offset(offset), debug, processor)
 		if err != nil {
 			logrus.WithError(err).Errorf("Consume %s topic and serialize %s schema failed\n", topic, schema)
 			return err
