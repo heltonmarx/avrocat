@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/IBM/sarama"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 )
 
@@ -63,10 +62,14 @@ func Consume(ctx context.Context, brokers []string, topic string, partitions str
 					if !ok {
 						continue
 					}
-					logrus.Debugf("incoming message: %v\n", spew.Sdump(msg))
-					processor.Process(ctx, topic, msg.Value)
+					out, err := processor.Process(ctx, topic, msg.Value)
+					if err != nil {
+						logrus.WithError(err).Error("failed to process incoming message")
+					} else {
+						logrus.Infoln(out)
+					}
 				case err := <-pc.Errors():
-					logrus.WithError(err).Errorf("partition consumer error")
+					logrus.WithError(err).Error("partition consumer error")
 				case <-ctx.Done():
 					pc.AsyncClose()
 					return

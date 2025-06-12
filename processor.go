@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/TylerBrock/colorjson"
-	"github.com/sirupsen/logrus"
 )
 
 // ProcessorOption allows to configure various aspects of Processor
@@ -39,27 +37,19 @@ func NewProcessor(schema []byte, opts ...ProcessorOption) (*Processor, error) {
 }
 
 // Process decodes the avro buffer colorizing the message printing in the stdout.
-func (p *Processor) Process(ctx context.Context, topic string, buf []byte) error {
-	if len(buf) != 0 {
-		msg, err := p.decode(buf)
-		if err != nil {
-			logrus.WithError(err).Error("Parsing failed")
-			return err
-		}
-		v, err := p.format(msg)
-		if err != nil {
-			logrus.WithError(err).Error("could not format incoming message")
-			return err
-		}
-		fmt.Println(string(v))
+func (p *Processor) Process(ctx context.Context, topic string, buf []byte) ([]byte, error) {
+	if len(buf) == 0 {
+		return buf, nil
 	}
-	return nil
+	msg, err := p.decode(buf)
+	if err != nil {
+		return nil, err
+	}
+	return p.format(msg)
 }
 
 func (p *Processor) decode(buf []byte) ([]byte, error) {
 	if p.tasr && len(buf) > 3 {
-		logrus.Debugf("TASR ID Type: %v\n", buf[0])
-		logrus.Debugf("TASR Version: %v\n", buf[2])
 		buf = buf[3:]
 	}
 	return p.decoder.Decode(buf)
