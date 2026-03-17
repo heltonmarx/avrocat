@@ -11,18 +11,19 @@ import (
 
 	"avrocat/version"
 
+	"github.com/IBM/sarama"
 	"github.com/genuinetools/pkg/cli"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	broker     string
-	topic      string
-	schema     string
-	partitions string
-	offset     string
-	tasr       bool
-	debug      bool
+	broker       string
+	topic        string
+	schema       string
+	partitions   string
+	offset       string
+	kafkaVersion string
+	debug        bool
 )
 
 func main() {
@@ -50,10 +51,11 @@ func main() {
 	p.FlagSet.StringVar(&offset, "offset", "newest", "The offset to start with. Can be `oldest` or `newest`")
 	p.FlagSet.StringVar(&offset, "o", "newest", "The offset to start with. Can be `oldest` or `newest`")
 
-	p.FlagSet.BoolVar(&tasr, "tasr", false, "Enable the tasr decoder (removing event header)")
-
 	p.FlagSet.BoolVar(&debug, "d", false, "enable debug logging")
 	p.FlagSet.BoolVar(&debug, "debug", false, "enable debug logging")
+
+	p.FlagSet.StringVar(&kafkaVersion, "V", sarama.MinVersion.String(), "Kafka version")
+	p.FlagSet.StringVar(&kafkaVersion, "Version", sarama.MinVersion.String(), "Kafka version")
 
 	// Set the before function.
 	p.Before = func(ctx context.Context) error {
@@ -112,13 +114,13 @@ func main() {
 			logrus.WithError(err).Errorf("Failed to transform `%s`\n", schema)
 			return err
 		}
-		processor, err := NewProcessor(buf, WithTasr(tasr))
+		processor, err := NewProcessor(buf)
 		if err != nil {
 			logrus.WithError(err).Errorf("Could not initialize processor\n")
 			return err
 		}
 		brokers := parseBrokers(broker)
-		err = Consume(ctx, brokers, topic, partitions, Offset(offset), debug, processor)
+		err = Consume(ctx, brokers, topic, partitions, Offset(offset), debug, kafkaVersion, processor)
 		if err != nil {
 			logrus.WithError(err).Errorf("Consume %s topic and serialize %s schema failed\n", topic, schema)
 			return err
@@ -129,8 +131,7 @@ func main() {
 }
 
 func parseBrokers(broker string) []string {
-	// trim whitespaces
-	broker = strings.Replace(broker, " ", "", -1)
+	broker = strings.ReplaceAll(broker, " ", "")
 	if !strings.Contains(broker, ",") {
 		return []string{broker}
 	}

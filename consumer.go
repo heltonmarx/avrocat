@@ -19,7 +19,15 @@ const (
 )
 
 // Consume it is a blocking function who dispatch an incoming event to processor.
-func Consume(ctx context.Context, brokers []string, topic string, partitions string, offset Offset, debug bool, processor *Processor) error {
+func Consume(ctx context.Context,
+	brokers []string,
+	topic string,
+	partitions string,
+	offset Offset,
+	debug bool,
+	kafkaVersion string,
+	processor *Processor,
+) (err error) {
 	var hwm int64
 	switch offset {
 	case Oldest:
@@ -32,7 +40,14 @@ func Consume(ctx context.Context, brokers []string, topic string, partitions str
 	if debug {
 		sarama.Logger = logrus.StandardLogger()
 	}
-	consumer, err := sarama.NewConsumer(brokers, nil)
+	config := sarama.NewConfig()
+
+	config.Version, err = sarama.ParseKafkaVersion(kafkaVersion)
+	if err != nil {
+		config.Version = sarama.MinVersion
+	}
+
+	consumer, err := sarama.NewConsumer(brokers, config)
 	if err != nil {
 		return err
 	}
@@ -45,7 +60,8 @@ func Consume(ctx context.Context, brokers []string, topic string, partitions str
 		"brokers":    brokers,
 		"topic":      topic,
 		"partitions": partitionList,
-		"offset":     offset}).Debugf("starting consumer")
+		"offset":     offset,
+	}).Debugf("starting consumer")
 
 	var wg sync.WaitGroup
 	for _, partition := range partitionList {
