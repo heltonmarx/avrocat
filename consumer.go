@@ -97,12 +97,26 @@ func Consume(ctx context.Context,
 	return consumer.Close()
 }
 
+// getPartitions returns a slice of partition IDs for the given topic.
+// If partitions is "all", it returns all partitions for the topic.
+// Otherwise, it parses a comma-separated list of partition numbers.
+// Parameters:
+//
+//	consumer: sarama.Consumer instance used to fetch partition information.
+//	topic: Kafka topic name.
+//	partitions: "all" or comma-separated partition numbers.
+//
+// Returns:
+//
+//	[]int32: slice of partition IDs.
+//	error: error if parsing fails or partitions cannot be retrieved.
 func getPartitions(consumer sarama.Consumer, topic, partitions string) ([]int32, error) {
 	if partitions == "all" {
 		return consumer.Partitions(topic)
 	}
 	v := strings.Split(partitions, ",")
-	var list []int32
+
+	list := make([]int32, 0, len(v))
 	for _, p := range v {
 		val, err := strconv.ParseInt(p, 10, 32)
 		if err != nil {

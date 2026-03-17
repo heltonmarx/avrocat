@@ -107,7 +107,9 @@ func updateElement(v reflect.Value, element map[string]any, node Node) {
 	}
 }
 
-// buildNodeByMapping substitute a reference by a node.
+// buildNodeByMapping attempts to resolve a schema reference by looking up the provided reflect.Value in the schemasMapping.
+// It accepts a reflect.Value representing a potential schema reference and a map of schema nodes.
+// Returns the resolved Node and a boolean indicating success.
 func buildNodeByMapping(v reflect.Value, schemasMapping map[string]Node) (Node, bool) {
 	var emptyNode Node
 
@@ -121,7 +123,7 @@ func buildNodeByMapping(v reflect.Value, schemasMapping map[string]Node) (Node, 
 				Fields: node.Fields,
 			}, true
 		}
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		if !v.IsNil() {
 			return buildNodeByMapping(v.Elem(), schemasMapping)
 		}
@@ -140,6 +142,7 @@ func buildNodeByMapping(v reflect.Value, schemasMapping map[string]Node) (Node, 
 			}
 		}
 	}
+	// Return false to indicate that no matching node was found in the mapping.
 	return emptyNode, false
 }
 

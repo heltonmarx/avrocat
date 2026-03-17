@@ -1,18 +1,21 @@
-FROM golang:alpine as builder
-MAINTAINER Helton Marques <hmarques@themeetgroup.com>
-
-ENV PATH /go/bin:/usr/local/go/bin:$PATH
-ENV GOPATH /go
+FROM golang:1.24.5-alpine AS builder
 
 RUN	apk add --no-cache \
 	bash \
 	ca-certificates
 
-COPY . /go/src/github.meetmecorp.com/hmarques/avrocat
+COPY . /go/src/avrocat
+WORKDIR /go/src/avrocat
 
 RUN set -x \
-	&& apk add --no-cache --virtual .build-deps make \
-	&& cd /go/src/github.meetmecorp.com/hmarques/avrocat \
+	&& apk add --no-cache --virtual .build-deps \
+	git \
+	gcc \
+	libc-dev \
+	libgcc \
+	make \
+	&& cd /go/src/avrocat \
+	&& go mod download \
 	&& make \
 	&& mv avrocat /usr/bin/avrocat \
 	&& apk del .build-deps \

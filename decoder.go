@@ -5,12 +5,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Decoder holds the avro codec schema.
+// Decoder wraps an Avro codec for binary-to-textual conversion.
 type Decoder struct {
 	codec *goavro.Codec
 }
 
-// NewDecoder initialize the avro codec, returning the decoder.
+// NewDecoder initializes the avro codec and returns a Decoder.
 func NewDecoder(schema string) (*Decoder, error) {
 	codec, err := goavro.NewCodec(schema)
 	if err != nil {
@@ -20,8 +20,7 @@ func NewDecoder(schema string) (*Decoder, error) {
 	return &Decoder{codec}, nil
 }
 
-// Decode attempts to decode the bytes in buf using one of the Code instances
-// in codex.
+// Decode attempts to decode the bytes in buf using the Decoder's codec.
 func (d *Decoder) Decode(buf []byte) ([]byte, error) {
 	datum, _, err := d.codec.NativeFromBinary(buf)
 	if err != nil {
