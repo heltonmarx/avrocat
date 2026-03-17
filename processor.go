@@ -12,7 +12,7 @@ type Processor struct {
 	decoder *Decoder
 }
 
-// NewProcessor initialize decoder returing processor.
+// NewProcessor initializes a Processor with a decoder using the provided schema.
 func NewProcessor(schema []byte) (*Processor, error) {
 	decoder, err := NewDecoder(string(schema))
 	if err != nil {
@@ -22,7 +22,7 @@ func NewProcessor(schema []byte) (*Processor, error) {
 	return processor, nil
 }
 
-// Process decodes the avro buffer colorizing the message printing in the stdout.
+// Process decodes the Avro buffer, formats the message with color, and returns the result.
 func (p *Processor) Process(ctx context.Context, topic string, buf []byte) ([]byte, error) {
 	if len(buf) == 0 {
 		return buf, nil

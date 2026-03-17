@@ -1,6 +1,6 @@
 # avrocat
 
-Consume events from kafka deserializing using avro schemas and print as a json message
+Consumes events from Kafka, deserializes them using Avro schemas, and prints each event as a JSON message.
 
 ## Usage
 
@@ -9,13 +9,13 @@ Usage: avrocat <command>
 
 Flags:
 
-  -b, --broker      Bootstrap broker (host[:port]) (default: <none>)
-  -d                enable debug logging (default: false)
+  -V, --Version     Kafka version (default: 0.8.2.0)
+  -b, --broker(s)   Bootstrap broker(s) (host[:port]), comma-separated (default: <none>)
+  -d, --debug       enable debug logging (default: false)
   -o, --offset      The offset to start with. Can be `oldest` or `newest` (default: newest)
   -p, --partitions  The partitions to consume, can be 'all' or comma-separated numbers (default: all)
   -s, --schema      Path to avro schema file (default: <none>)
   -t, --topic       Topic to consume from (default: <none>)
-  --tasr            Enable the tasr decoder (removing event header) (default: false)
 
 Commands:
 
@@ -27,8 +27,8 @@ Commands:
 
 ### Build
 
-It's not necessary install [Golang](https://golang.org/dl/) to run the script, just build the container
-using [docker](https://www.docker.com/) with following command:
+It's not necessary to install [Golang](https://golang.org/dl/) to run the script, just build the container
+using [docker](https://www.docker.com/) with the following command:
 
 ```console
 docker build -t avrocat .
