@@ -5,13 +5,13 @@ go 1.24.3
 require (
 	github.com/IBM/sarama v1.45.2
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2
-	github.com/davecgh/go-spew v1.1.1
 	github.com/genuinetools/pkg v0.0.0-20181022210355-2fcf164d37cb
 	github.com/linkedin/goavro/v2 v2.13.1
 	github.com/sirupsen/logrus v1.9.3
 )
 
 require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
