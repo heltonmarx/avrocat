@@ -155,7 +155,11 @@ func trimSuffix(namespace string) string {
 }
 
 func isJSONArray(buf []byte) bool {
-	var arr []any
-	err := json.Unmarshal(buf, &arr)
-	return err == nil
+	for _, b := range buf {
+		if b == ' ' || b == '\n' || b == '\t' || b == '\r' {
+			continue
+		}
+		return b == '['
+	}
+	return false
 }
