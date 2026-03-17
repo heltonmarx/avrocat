@@ -51,6 +51,7 @@ func Consume(ctx context.Context,
 	if err != nil {
 		return err
 	}
+	defer consumer.Close()
 
 	partitionList, err := getPartitions(consumer, topic, partitions)
 	if err != nil {
@@ -76,14 +77,14 @@ func Consume(ctx context.Context,
 				select {
 				case msg, ok := <-pc.Messages():
 					if !ok {
-						continue
+						return
 					}
 					out, err := processor.Process(ctx, topic, msg.Value)
 					if err != nil {
 						logrus.WithError(err).Error("failed to process incoming message")
-					} else {
-						logrus.Infoln(out)
+						continue
 					}
+					logrus.Infoln(out)
 				case err := <-pc.Errors():
 					logrus.WithError(err).Error("partition consumer error")
 				case <-ctx.Done():
@@ -94,7 +95,7 @@ func Consume(ctx context.Context,
 		}(pc)
 	}
 	wg.Wait()
-	return consumer.Close()
+	return nil
 }
 
 // getPartitions returns a slice of partition IDs for the given topic.
