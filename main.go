@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/genuinetools/pkg/cli"
+	"github.com/linkedin/goavro/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -101,29 +103,25 @@ func main() {
 		}
 
 		if _, err := os.Stat(schema); os.IsNotExist(err) {
-			logrus.WithError(err).Errorf("No such file or directory: %s\n", schema)
-			return err
+			return fmt.Errorf("No suck file or directory `%s`: %w", schema, err)
 		}
 		buf, err := os.ReadFile(schema)
 		if err != nil {
-			logrus.WithError(err).Errorf("Reading file %s failed\n", schema)
-			return err
+			return fmt.Errorf("Reading filed %s failed: %w", schema, err)
 		}
 		buf, err = Transform(buf)
 		if err != nil {
-			logrus.WithError(err).Errorf("Failed to transform `%s`\n", schema)
-			return err
+			return fmt.Errorf("Failed to transform `%s`: %w", schema, err)
 		}
-		processor, err := NewProcessor(buf)
+		codec, err := goavro.NewCodec(string(buf))
 		if err != nil {
-			logrus.WithError(err).Errorf("Could not initialize processor\n")
-			return err
+			return fmt.Errorf("Failed to load avro code: %w", err)
 		}
+		processor := NewProcessor(NewAvroDecoder(codec))
 		brokers := parseBrokers(broker)
 		err = Consume(ctx, brokers, topic, partitions, Offset(offset), debug, kafkaVersion, processor)
 		if err != nil {
-			logrus.WithError(err).Errorf("Consume %s topic and serialize %s schema failed\n", topic, schema)
-			return err
+			return fmt.Errorf("Consume %s topic and serialize %s schema failed: %w", topic, schema, err)
 		}
 		return nil
 	}

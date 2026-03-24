@@ -9,17 +9,12 @@ import (
 
 // Processor holds the avro decoder.
 type Processor struct {
-	decoder *Decoder
+	decoder Decoder
 }
 
 // NewProcessor initializes a Processor with a decoder using the provided schema.
-func NewProcessor(schema []byte) (*Processor, error) {
-	decoder, err := NewDecoder(string(schema))
-	if err != nil {
-		return nil, err
-	}
-	processor := &Processor{decoder: decoder}
-	return processor, nil
+func NewProcessor(decoder Decoder) *Processor {
+	return &Processor{decoder: decoder}
 }
 
 // Process decodes the Avro buffer, formats the message with color, and returns the result.

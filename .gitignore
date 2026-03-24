@@ -2,3 +2,4 @@ avrocat
 
 # vscode
 .vscode/
+.aider*

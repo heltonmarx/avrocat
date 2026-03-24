@@ -2,9 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"reflect"
-	"slices"
 	"strings"
 )
 
@@ -18,9 +17,17 @@ type Node struct {
 
 // Transform transforms an array of avro json schemas into only one avro json schema.
 func Transform(buf []byte) ([]byte, error) {
+	// First, check if it's valid JSON
 	if !isJSONArray(buf) {
+		// If it's not an array, it might be a single object
+		// Check if it's valid JSON
+		var temp interface{}
+		if err := json.Unmarshal(buf, &temp); err != nil {
+			return nil, fmt.Errorf("it's not a valid JSON: %w", err)
+		}
 		return buf, nil
 	}
+
 	nodes := make([]Node, 0)
 	err := json.Unmarshal(buf, &nodes)
 	switch {
@@ -28,6 +35,9 @@ func Transform(buf []byte) ([]byte, error) {
 		return nil, err
 	case len(nodes) == 0:
 		return buf, nil
+	case len(nodes) == 1:
+		// If there's only one node, return it as-is
+		return json.Marshal(nodes[0])
 	}
 
 	schemasMapping, err := generateSchemaMapping(nodes)
@@ -35,17 +45,31 @@ func Transform(buf []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	for _, node := range schemasMapping {
+	// Update references in all nodes
+	for key, node := range schemasMapping {
 		updateSchemaReferences(node, schemasMapping)
+		schemasMapping[key] = node
 	}
 
+	// Find the root node (the one whose name matches the last part of its namespace)
 	for _, node := range nodes {
+		// If node has no namespace, it can't be the root
+		if node.Namespace == "" {
+			continue
+		}
 		namespace := trimSuffix(node.Namespace)
 		if namespace == node.Name {
+			// Get the updated node from schemasMapping
+			refName := strings.Join([]string{node.Namespace, node.Name}, ".")
+			if updatedNode, exists := schemasMapping[refName]; exists {
+				return json.Marshal(updatedNode)
+			}
 			return json.Marshal(node)
 		}
 	}
-	return nil, errors.New("could not transform schema")
+
+	// If no root found, return the last node
+	return json.Marshal(nodes[len(nodes)-1])
 }
 
 // generateSchemaMapping generates an node map by reference.
@@ -66,20 +90,21 @@ func updateSchemaReferences(node Node, schemasMapping map[string]Node) {
 		item := element["type"]
 		switch item := item.(type) {
 		case []any:
-			m := item
-			for i, obj := range m {
+			// Handle union types
+			newItems := make([]any, 0, len(item))
+			for _, obj := range item {
 				v := reflect.ValueOf(obj)
 				if node, ok := buildNodeByMapping(v, schemasMapping); ok {
-					// remove object from node
-					m = slices.Delete(m, i, i+1)
-					// append the new node
-					m = append(m, Node{
+					newItems = append(newItems, Node{
 						Name:   node.Name,
 						Type:   node.Type,
 						Fields: node.Fields,
 					})
+				} else {
+					newItems = append(newItems, obj)
 				}
 			}
+			element["type"] = newItems
 		default:
 			v := reflect.ValueOf(item)
 			if node, ok := buildNodeByMapping(v, schemasMapping); ok {
@@ -148,8 +173,11 @@ func buildNodeByMapping(v reflect.Value, schemasMapping map[string]Node) (Node, 
 
 func trimSuffix(namespace string) string {
 	n := strings.LastIndex(namespace, ".")
-	if n == 0 || n == len(namespace) {
+	switch {
+	case n <= 0:
 		return namespace
+	case n == len(namespace)-1:
+		return namespace[:n]
 	}
 	return namespace[n+1:]
 }

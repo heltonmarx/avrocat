@@ -1,36 +1,34 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/linkedin/goavro/v2"
-	"github.com/sirupsen/logrus"
 )
 
+type Decoder interface {
+	Decode(buf []byte) ([]byte, error)
+}
+
 // Decoder wraps an Avro codec for binary-to-textual conversion.
-type Decoder struct {
+type AvroDecoder struct {
 	codec *goavro.Codec
 }
 
-// NewDecoder initializes the avro codec and returns a Decoder.
-func NewDecoder(schema string) (*Decoder, error) {
-	codec, err := goavro.NewCodec(schema)
-	if err != nil {
-		logrus.WithError(err).Error("could not create new codec")
-		return nil, err
-	}
-	return &Decoder{codec}, nil
+// NewAvroDecoder initializes the avro codec and returns a Decoder.
+func NewAvroDecoder(codec *goavro.Codec) *AvroDecoder {
+	return &AvroDecoder{codec}
 }
 
 // Decode attempts to decode the bytes in buf using the Decoder's codec.
-func (d *Decoder) Decode(buf []byte) ([]byte, error) {
+func (d *AvroDecoder) Decode(buf []byte) ([]byte, error) {
 	datum, _, err := d.codec.NativeFromBinary(buf)
 	if err != nil {
-		logrus.WithError(err).Error("could not parse native from binary")
-		return nil, err
+		return nil, fmt.Errorf("could mot parse native from binary: %w", err)
 	}
 	textual, err := d.codec.TextualFromNative(nil, datum)
 	if err != nil {
-		logrus.WithError(err).Error("could not parse textual from native")
-		return nil, err
+		return nil, fmt.Errorf("could not parse textual from native: %w", err)
 	}
 	return textual, nil
 }

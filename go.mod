@@ -1,6 +1,6 @@
 module avrocat
 
-go 1.24.5
+go 1.26
 
 require (
 	github.com/IBM/sarama v1.45.2
