@@ -18,16 +18,21 @@ const (
 	Newest Offset = "newest"
 )
 
-// Consume it is a blocking function who dispatch an incoming event to processor.
-func Consume(ctx context.Context,
-	brokers []string,
+type KafkaConsumer struct {
+	consumer   sarama.Consumer
+	partitions []int32
+	processor  *Processor
+	offset     int64
+}
+
+func NewKafkaConsumer(brokers []string,
 	topic string,
 	partitions string,
 	offset Offset,
 	debug bool,
 	kafkaVersion string,
 	processor *Processor,
-) (err error) {
+) (*KafkaConsumer, error) {
 	var hwm int64
 	switch offset {
 	case Oldest:
@@ -35,13 +40,14 @@ func Consume(ctx context.Context,
 	case Newest:
 		hwm = sarama.OffsetNewest
 	default:
-		return fmt.Errorf("invalid offset (%s) sould be `oldest` or `newest`", offset)
+		return nil, fmt.Errorf("invalid offset (%s) sould be `oldest` or `newest`", offset)
 	}
 	if debug {
 		sarama.Logger = logrus.StandardLogger()
 	}
 	config := sarama.NewConfig()
 
+	var err error
 	config.Version, err = sarama.ParseKafkaVersion(kafkaVersion)
 	if err != nil {
 		config.Version = sarama.MinVersion
@@ -49,27 +55,37 @@ func Consume(ctx context.Context,
 
 	consumer, err := sarama.NewConsumer(brokers, config)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer consumer.Close()
 
 	partitionList, err := getPartitions(consumer, topic, partitions)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	logrus.WithFields(logrus.Fields{
-		"brokers":    brokers,
-		"topic":      topic,
-		"partitions": partitionList,
-		"offset":     offset,
-	}).Debugf("starting consumer")
+	return &KafkaConsumer{
+		consumer:   consumer,
+		partitions: partitionList,
+		processor:  processor,
+		offset:     hwm,
+	}, nil
+}
+
+// Consume it is a blocking function who dispatch an incoming event to processor.
+func (c *KafkaConsumer) Consume(ctx context.Context) error {
+	defer func() {
+		if err := c.consumer.Close(); err != nil {
+			logrus.WithError(err).Error("failed to close consumer")
+		}
+	}()
 
 	var wg sync.WaitGroup
-	for _, partition := range partitionList {
-		pc, err := consumer.ConsumePartition(topic, partition, hwm)
+	for _, partition := range c.partitions {
+		pc, err := c.consumer.ConsumePartition(topic, partition, c.offset)
 		if err != nil {
 			return err
 		}
+		defer pc.AsyncClose()
+
 		wg.Add(1)
 		go func(pc sarama.PartitionConsumer) {
 			defer wg.Done()
@@ -79,7 +95,7 @@ func Consume(ctx context.Context,
 					if !ok {
 						return
 					}
-					out, err := processor.Process(ctx, topic, msg.Value)
+					out, err := c.processor.Process(ctx, topic, msg.Value)
 					if err != nil {
 						logrus.WithError(err).Error("failed to process incoming message")
 						continue
@@ -88,7 +104,6 @@ func Consume(ctx context.Context,
 				case err := <-pc.Errors():
 					logrus.WithError(err).Error("partition consumer error")
 				case <-ctx.Done():
-					pc.AsyncClose()
 					return
 				}
 			}

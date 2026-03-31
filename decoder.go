@@ -10,7 +10,7 @@ type Decoder interface {
 	Decode(buf []byte) ([]byte, error)
 }
 
-// Decoder wraps an Avro codec for binary-to-textual conversion.
+// AvroDecoder wraps an Avro codec for binary-to-textual conversion.
 type AvroDecoder struct {
 	codec *goavro.Codec
 }

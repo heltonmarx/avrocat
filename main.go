@@ -103,25 +103,30 @@ func main() {
 		}
 
 		if _, err := os.Stat(schema); os.IsNotExist(err) {
-			return fmt.Errorf("No suck file or directory `%s`: %w", schema, err)
+			return fmt.Errorf("no suck file or directory `%s`: %w", schema, err)
 		}
 		buf, err := os.ReadFile(schema)
 		if err != nil {
-			return fmt.Errorf("Reading filed %s failed: %w", schema, err)
+			return fmt.Errorf("reading filed %s failed: %w", schema, err)
 		}
 		buf, err = Transform(buf)
 		if err != nil {
-			return fmt.Errorf("Failed to transform `%s`: %w", schema, err)
+			return fmt.Errorf("failed to transform `%s`: %w", schema, err)
 		}
 		codec, err := goavro.NewCodec(string(buf))
 		if err != nil {
-			return fmt.Errorf("Failed to load avro code: %w", err)
+			return fmt.Errorf("failed to load avro code: %w", err)
 		}
 		processor := NewProcessor(NewAvroDecoder(codec))
+
 		brokers := parseBrokers(broker)
-		err = Consume(ctx, brokers, topic, partitions, Offset(offset), debug, kafkaVersion, processor)
+		consumer, err := NewKafkaConsumer(brokers, topic, partitions, Offset(offset), debug, kafkaVersion, processor)
 		if err != nil {
-			return fmt.Errorf("Consume %s topic and serialize %s schema failed: %w", topic, schema, err)
+			return fmt.Errorf("failed to initialize kafka consumer: %w", err)
+		}
+		err = consumer.Consume(ctx)
+		if err != nil {
+			return fmt.Errorf("consume %s topic and serialize %s schema failed: %w", topic, schema, err)
 		}
 		return nil
 	}
