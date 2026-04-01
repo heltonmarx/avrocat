@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"reflect"
 	"strings"
 )
@@ -17,14 +17,10 @@ type Node struct {
 
 // Transform transforms an array of avro json schemas into only one avro json schema.
 func Transform(buf []byte) ([]byte, error) {
-	// First, check if it's valid JSON
-	if !isJSONArray(buf) {
-		// If it's not an array, it might be a single object
-		// Check if it's valid JSON
-		var temp interface{}
-		if err := json.Unmarshal(buf, &temp); err != nil {
-			return nil, fmt.Errorf("it's not a valid JSON: %w", err)
-		}
+	switch {
+	case !json.Valid(buf):
+		return nil, errors.New("invalid json")
+	case !isJSONArray(buf):
 		return buf, nil
 	}
 
