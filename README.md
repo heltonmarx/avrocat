@@ -1,6 +1,6 @@
 # avrocat
 
-Consumes events from Kafka, deserializes them using Avro schemas, and prints each event as a JSON message.
+A CLI tool for consuming events from Kafka, deserializing them with Avro schemas, and printing the output as JSON.
 
 ## Usage
 
