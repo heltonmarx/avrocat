@@ -29,7 +29,7 @@ Flag reference:
 - `-o` / `--offset` — `newest` (default) or `oldest`
 - `-V` / `--Version` — Kafka protocol version (default: `0.8.2.0`)
 - `-d` / `--debug` — Enable debug logging (routes sarama logs to logrus)
-- `--sasl` — Enable SASL authentication
+- `-S` / `--sasl` — Enable SASL authentication
 - `-U` / `--username` — SASL username
 - `-P` / `--password` — SASL password
 - `-M` / `--mechanism` — SASL mechanism: `PLAIN` (default), `SCRAM-SHA-256`, `SCRAM-SHA-512`, `OAUTHBEARER`, `GSSAPI`
