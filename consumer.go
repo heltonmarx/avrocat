@@ -31,6 +31,7 @@ func NewKafkaConsumer(brokers []string,
 	offset Offset,
 	debug bool,
 	kafkaVersion string,
+	sasl SASL,
 	processor *Processor,
 ) (*KafkaConsumer, error) {
 	var hwm int64
@@ -51,6 +52,19 @@ func NewKafkaConsumer(brokers []string,
 	config.Version, err = sarama.ParseKafkaVersion(kafkaVersion)
 	if err != nil {
 		config.Version = sarama.MinVersion
+	}
+
+	if sasl.enabled {
+		config.Net.SASL.Enable = true
+		config.Net.SASL.User = sasl.username
+		config.Net.SASL.Password = sasl.password
+		config.Net.SASL.Mechanism = ParseSASLMechanism(sasl.mechanism)
+		switch config.Net.SASL.Mechanism {
+		case sarama.SASLTypeSCRAMSHA512:
+			config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &XDGSCRAMClient{HashGeneratorFcn: SHA512} }
+		case sarama.SASLTypeSCRAMSHA256:
+			config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &XDGSCRAMClient{HashGeneratorFcn: SHA256} }
+		}
 	}
 
 	consumer, err := sarama.NewConsumer(brokers, config)
@@ -100,7 +114,7 @@ func (c *KafkaConsumer) Consume(ctx context.Context) error {
 						logrus.WithError(err).Error("failed to process incoming message")
 						continue
 					}
-					logrus.Infoln(out)
+					logrus.Infoln(string(out))
 				case err := <-pc.Errors():
 					logrus.WithError(err).Error("partition consumer error")
 				case <-ctx.Done():

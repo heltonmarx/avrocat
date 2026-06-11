@@ -26,6 +26,8 @@ var (
 	offset       string
 	kafkaVersion string
 	debug        bool
+
+	sasl SASL
 )
 
 func main() {
@@ -59,6 +61,18 @@ func main() {
 	p.FlagSet.StringVar(&kafkaVersion, "V", sarama.MinVersion.String(), "Kafka version")
 	p.FlagSet.StringVar(&kafkaVersion, "Version", sarama.MinVersion.String(), "Kafka version")
 
+	p.FlagSet.BoolVar(&sasl.enabled, "S", false, "Kafka SASL enabled")
+	p.FlagSet.BoolVar(&sasl.enabled, "sasl", false, "Kafka SASL enabled")
+
+	p.FlagSet.StringVar(&sasl.username, "U", "", "Kafka SASL username")
+	p.FlagSet.StringVar(&sasl.username, "username", "", "Kafka SASL username")
+
+	p.FlagSet.StringVar(&sasl.password, "P", "", "Kafka SASL password")
+	p.FlagSet.StringVar(&sasl.password, "password", "", "Kafka SASL password")
+
+	p.FlagSet.StringVar(&sasl.mechanism, "M", sarama.SASLTypePlaintext, "Kafka SASL mechanism")
+	p.FlagSet.StringVar(&sasl.mechanism, "mechanism", sarama.SASLTypePlaintext, "Kafka SASL mechanism")
+
 	// Set the before function.
 	p.Before = func(ctx context.Context) error {
 		// On ^C, or SIGTERM handle exit.
@@ -70,7 +84,7 @@ func main() {
 			for sig := range signals {
 				cancel()
 				logrus.Infof("Received %s, exiting.", sig.String())
-				os.Exit(0)
+				os.Exit(1)
 			}
 		}()
 
@@ -85,21 +99,8 @@ func main() {
 	}
 
 	p.Action = func(ctx context.Context, args []string) error {
-		switch {
-		case broker == "":
-			return errors.New("kafka broker not defined")
-		case schema == "":
-			return errors.New("schema filename not defined")
-		case topic == "":
-			v := strings.Split(schema, "/")
-			if len(v) == 0 {
-				return errors.New("invalid schema path")
-			}
-			n := len(v) - 1
-			topic = strings.TrimSuffix(v[n], ".avsc")
-			if topic == "" {
-				return errors.New("topic not defined")
-			}
+		if err := validate(); err != nil {
+			return err
 		}
 
 		if _, err := os.Stat(schema); os.IsNotExist(err) {
@@ -120,7 +121,7 @@ func main() {
 		processor := NewProcessor(NewAvroDecoder(codec))
 
 		brokers := parseBrokers(broker)
-		consumer, err := NewKafkaConsumer(brokers, topic, partitions, Offset(offset), debug, kafkaVersion, processor)
+		consumer, err := NewKafkaConsumer(brokers, topic, partitions, Offset(offset), debug, kafkaVersion, sasl, processor)
 		if err != nil {
 			return fmt.Errorf("failed to initialize kafka consumer: %w", err)
 		}
@@ -139,4 +140,24 @@ func parseBrokers(broker string) []string {
 		return []string{broker}
 	}
 	return strings.Split(broker, ",")
+}
+
+func validate() error {
+	switch {
+	case broker == "":
+		return errors.New("kafka broker not defined")
+	case schema == "":
+		return errors.New("schema filename not defined")
+	case topic == "":
+		v := strings.Split(schema, "/")
+		if len(v) == 0 {
+			return errors.New("invalid schema path")
+		}
+		n := len(v) - 1
+		topic = strings.TrimSuffix(v[n], ".avsc")
+		if topic == "" {
+			return errors.New("topic not defined")
+		}
+	}
+	return sasl.validate()
 }
