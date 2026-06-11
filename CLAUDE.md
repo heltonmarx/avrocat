@@ -29,6 +29,7 @@ Flag reference:
 - `-o` / `--offset` — `newest` (default) or `oldest`
 - `-V` / `--Version` — Kafka protocol version (default: `0.8.2.0`)
 - `-d` / `--debug` — Enable debug logging (routes sarama logs to logrus)
+- `--strip-schema-id` — Strip the 5-byte Confluent Schema Registry header (magic byte + schema ID) before decoding (default: `true`); set to `false` for raw Avro messages
 - `-S` / `--sasl` — Enable SASL authentication
 - `-U` / `--username` — SASL username
 - `-P` / `--password` — SASL password

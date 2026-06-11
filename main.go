@@ -19,13 +19,14 @@ import (
 )
 
 var (
-	broker       string
-	topic        string
-	schema       string
-	partitions   string
-	offset       string
-	kafkaVersion string
-	debug        bool
+	broker        string
+	topic         string
+	schema        string
+	partitions    string
+	offset        string
+	kafkaVersion  string
+	debug         bool
+	stripSchemaID bool
 
 	sasl SASL
 )
@@ -58,8 +59,10 @@ func main() {
 	p.FlagSet.BoolVar(&debug, "d", false, "enable debug logging")
 	p.FlagSet.BoolVar(&debug, "debug", false, "enable debug logging")
 
-	p.FlagSet.StringVar(&kafkaVersion, "V", sarama.MinVersion.String(), "Kafka version")
-	p.FlagSet.StringVar(&kafkaVersion, "Version", sarama.MinVersion.String(), "Kafka version")
+	p.FlagSet.StringVar(&kafkaVersion, "V", sarama.DefaultVersion.String(), "Kafka version")
+	p.FlagSet.StringVar(&kafkaVersion, "Version", sarama.DefaultVersion.String(), "Kafka version")
+
+	p.FlagSet.BoolVar(&stripSchemaID, "strip-schema-id", true, "Strip the 5-byte Confluent Schema Registry header before decoding")
 
 	p.FlagSet.BoolVar(&sasl.enabled, "S", false, "Kafka SASL enabled")
 	p.FlagSet.BoolVar(&sasl.enabled, "sasl", false, "Kafka SASL enabled")
@@ -118,7 +121,7 @@ func main() {
 		if err != nil {
 			return fmt.Errorf("failed to load avro code: %w", err)
 		}
-		processor := NewProcessor(NewAvroDecoder(codec))
+		processor := NewProcessor(NewAvroDecoder(codec, stripSchemaID))
 
 		brokers := parseBrokers(broker)
 		consumer, err := NewKafkaConsumer(brokers, topic, partitions, Offset(offset), debug, kafkaVersion, sasl, processor)
